@@ -28,29 +28,62 @@ number_of_cells = 25
 #make a food class, since we will call it again and again 
 class Food:
     #constructor of object 
-    def __init__(self):
-        self.position = self.generate_random_pos()
+    def __init__(self, snake_body):
+        self.position = self.generate_random_pos(snake_body)
 
     def draw(self):
         food_rect = pygame.Rect(self.position.x * cell_size, self.position.y * cell_size, cell_size, cell_size)
         screen.blit(food_surface, food_rect)
     
-    def generate_random_pos(self):
+    def generate_random_cell(self):
         x = random.randint(0, number_of_cells - 1)
         y = random.randint(0, number_of_cells - 1)
-        position = Vector2(x, y)
-        return position
-    
+        return Vector2(x, y)
+
+    def generate_random_pos(self, snake_body):
+        position = self.generate_random_cell()
+        while position in snake_body: 
+            position = self.generate_random_cell()   
+        return position  
+#make a food class, since we will call it again and again 
 class Snake:
     def __init__(self):
         self.body = [Vector2(6, 9), Vector2(5, 9), Vector2(4, 9)]
-    
+        self.direction = Vector2(1, 0)
+        self.add_segment = False
+
     def draw(self):
         for segment in self.body:
             segment_rect = (segment.x * cell_size, segment.y * cell_size, cell_size, cell_size)
             pygame.draw.rect(screen, DARK_PURPLE, segment_rect, 0, 7)
             # 0 means rect filled with color, 7 is border radius 
- 
+    
+    def update(self):
+        self.body.insert(0, self.body[0] + self.direction)
+        if self.add_segment == True:
+            self.add_segment = False
+        else:
+            self.body = self.body[:-1] # selecting all elements from beginning to second last element, so we remove the last segment 
+            
+
+class Game:
+    def __init__(self):
+        self.snake = Snake()
+        self.food = Food(self.snake.body)
+    
+    def draw(self):
+        self.food.draw()
+        self.snake.draw()
+    
+    def update(self):
+        self.snake.update()
+        self.check_collision_with_food()
+
+    def check_collision_with_food(self):
+        if self.snake.body[0] == self.food.position:
+            self.food.position = self.food.generate_random_pos(self.snake.body) 
+            self.snake.add_segment = True
+
 #make screen is as an object
 screen = pygame.display.set_mode((number_of_cells * cell_size, number_of_cells * cell_size))
 pygame.display.set_caption("Retro Snake")
@@ -62,22 +95,35 @@ clock = pygame.time.Clock()
 # 2. update positions as per event listeners
 # 3. drawing objects in new positions 
 
-food = Food()
-snake = Snake()
+game = Game()
 food_surface = pygame.image.load("food.png")
 
+SNAKE_UPDATE = pygame.USEREVENT
+pygame.time.set_timer(SNAKE_UPDATE, 200) # invoked every 200ms 
 
 # GAME LOOP
 while True:
     # 1. event handling
     for event in pygame.event.get(): #.event.get() stores all previous events in list
+        if event.type == SNAKE_UPDATE:
+            game.update()
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-    
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP and game.snake.direction != Vector2(0, 1):
+                game.snake.direction = Vector2(0, -1)
+            if event.key == pygame.K_DOWN and game.snake.direction != Vector2(0, -1):
+                game.snake.direction = Vector2(0, 1)
+            if event.key == pygame.K_LEFT and game.snake.direction != Vector2(1, 0):
+                game.snake.direction = Vector2(-1, 0)
+            if event.key == pygame.K_RIGHT and game.snake.direction != Vector2(-1, 0):
+                game.snake.direction = Vector2(1, 0)
+    # if we place the snake.update() here then the update will be called 60 times per second
+    # therefore we declare a user event invoked every 200ms and it is stored inside .event.get()
 
+    #Drawing 
     screen.fill(MAUVE)
-    food.draw()
-    snake.draw()
+    game.draw()
     pygame.display.update()
     clock.tick(60)
