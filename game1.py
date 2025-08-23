@@ -124,7 +124,7 @@ class Game:
 
     def check_collision_with_food(self):
         if self.snake.body[0] == self.food.position:
-            self.food.position = self.food.generate_food_near_head(self.snake.body) 
+            self.food.position = self.food.generate_random_pos(self.snake.body) 
             self.snake.add_segment = True
     
     def check_collision_with_walls(self):
