@@ -24,6 +24,7 @@ pygame.init()
 #                3. blit the score surface (copy image surface on the screen surface)
 title_font = pygame.font.Font(None, 40)
 score_font = pygame.font.Font(None, 27)
+high_score_font = pygame.font.Font(None, 30)
 DARK_PURPLE = (48, 25, 52)
 MAUVE = (224, 176, 255)
 
@@ -113,6 +114,7 @@ class Snake:
 class Game:
     def __init__(self):
         self.score = 0
+        self.high_score = 0
         self.snake = Snake()
         self.food = Food(self.snake.body)
         self.state = "RUNNING"
@@ -131,10 +133,14 @@ class Game:
 
     def check_collision_with_food(self):
         if self.snake.body[0] == self.food.position:
-            self.food.position = self.food.generate_food_near_head(self.snake.body) 
+            self.food.position = self.food.generate_random_pos(self.snake.body) 
             self.score += 1
             self.snake.add_segment = True
             self.snake.eat_sound.play()
+
+            # increase speed based on score
+            new_delay = max(50, 200 - (self.score // 5) * 20)  
+            pygame.time.set_timer(SNAKE_UPDATE, new_delay)
     
     def check_collision_with_walls(self):
         if self.snake.body[0].x == -1 or self.snake.body[0].x == number_of_cells or self.snake.body[0].y == -1 or self.snake.body[0].y == number_of_cells:
@@ -146,11 +152,13 @@ class Game:
             self.game_over()
     
     def game_over(self):
+        self.snake.wall_collision_sound.play()
+        self.high_score = max(self.high_score, self.score)
         self.score = 0
         self.snake.reset()
         self.food.position = self.food.generate_random_pos(self.snake.body)
         self.state = "STOPPED"
-        self.snake.wall_collision_sound.play()
+        pygame.time.set_timer(SNAKE_UPDATE, 200)  # Reset speed
 
 #make screen is as an object
 screen = pygame.display.set_mode((2*OFFSET + number_of_cells * cell_size, 2*OFFSET + number_of_cells * cell_size))
@@ -201,10 +209,19 @@ while True:
     game.draw()
     title_surface = title_font.render("Retro Snake", True, DARK_PURPLE)
     score_surface = title_font.render(str(game.score), True, DARK_PURPLE)
-
+    high_score_surface = high_score_font.render("High Score: " + str(game.high_score), True, DARK_PURPLE)
 
     screen.blit(title_surface, (OFFSET - 5, 20))
     screen.blit(score_surface, (OFFSET - 5, cell_size * number_of_cells + 75))
+    screen.blit(high_score_surface, (OFFSET + cell_size * number_of_cells - 120, cell_size * number_of_cells + 75))
+     # 3. update the display
+     # pygame.display.flip() # updates entire screen
+     # OR 
+     # only update a portion of the screen
+     # pygame.display.update(rectangle)
+     # pygame.display.update([rectangle1, rectangle2])
 
     pygame.display.update()
+
+    
     clock.tick(60)
