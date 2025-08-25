@@ -19,13 +19,18 @@ from pygame.math import Vector2
 #basic setup of game, definitions
 pygame.init()
 
+# display text : 1. create font object
+#                2. create surface
+#                3. blit the score surface (copy image surface on the screen surface)
+title_font = pygame.font.Font(None, 40)
+score_font = pygame.font.Font(None, 27)
 DARK_PURPLE = (48, 25, 52)
 MAUVE = (224, 176, 255)
 
 cell_size = 25
 number_of_cells = 25
 
-OFFSET = 60
+OFFSET = 63
 #make a food class, since we will call it again and again 
 class Food:
     #constructor of object 
@@ -60,14 +65,13 @@ class Food:
         candidate = Vector2(head.x - 1, head.y)
         if self.is_valid(candidate, snake_body):
             return candidate
-
-        # Then try below
-        candidate = Vector2(head.x, head.y + 1)
+        # Then try above
+        candidate = Vector2(head.x, head.y - 1)
         if self.is_valid(candidate, snake_body):
             return candidate
 
-        # Then try above
-        candidate = Vector2(head.x, head.y - 1)
+        # Then try below
+        candidate = Vector2(head.x, head.y + 1)
         if self.is_valid(candidate, snake_body):
             return candidate
 
@@ -86,6 +90,8 @@ class Snake:
         self.body = [Vector2(6, 9), Vector2(5, 9), Vector2(4, 9)]
         self.direction = Vector2(1, 0)
         self.add_segment = False
+        self.eat_sound = pygame.mixer.Sound("eat.mp3")
+        self.wall_collision_sound = pygame.mixer.Sound("wall.mp3")
 
     def draw(self):
         for segment in self.body:
@@ -103,13 +109,14 @@ class Snake:
     def reset(self):
         self.body = [Vector2(6, 9), Vector2(5, 9), Vector2(4, 9)]
         self.direction = Vector2(1, 0)
-    
 #make a class that calls Snake and Food class
 class Game:
     def __init__(self):
+        self.score = 0
         self.snake = Snake()
         self.food = Food(self.snake.body)
         self.state = "RUNNING"
+
     
     def draw(self):
         self.food.draw()
@@ -124,8 +131,10 @@ class Game:
 
     def check_collision_with_food(self):
         if self.snake.body[0] == self.food.position:
-            self.food.position = self.food.generate_random_pos(self.snake.body) 
+            self.food.position = self.food.generate_food_near_head(self.snake.body) 
+            self.score += 1
             self.snake.add_segment = True
+            self.snake.eat_sound.play()
     
     def check_collision_with_walls(self):
         if self.snake.body[0].x == -1 or self.snake.body[0].x == number_of_cells or self.snake.body[0].y == -1 or self.snake.body[0].y == number_of_cells:
@@ -137,9 +146,11 @@ class Game:
             self.game_over()
     
     def game_over(self):
+        self.score = 0
         self.snake.reset()
         self.food.position = self.food.generate_random_pos(self.snake.body)
         self.state = "STOPPED"
+        self.snake.wall_collision_sound.play()
 
 #make screen is as an object
 screen = pygame.display.set_mode((2*OFFSET + number_of_cells * cell_size, 2*OFFSET + number_of_cells * cell_size))
@@ -188,5 +199,12 @@ while True:
     pygame.draw.rect(screen, DARK_PURPLE, 
                      (OFFSET - 5, OFFSET - 5, cell_size*number_of_cells + 10, cell_size*number_of_cells + 10), 5)
     game.draw()
+    title_surface = title_font.render("Retro Snake", True, DARK_PURPLE)
+    score_surface = title_font.render(str(game.score), True, DARK_PURPLE)
+
+
+    screen.blit(title_surface, (OFFSET - 5, 20))
+    screen.blit(score_surface, (OFFSET - 5, cell_size * number_of_cells + 75))
+
     pygame.display.update()
     clock.tick(60)
